@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIRS Nexus</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Inter, system-ui, sans-serif; background: #FFFFFF; color: #0F172A; }
+    .container { display: flex; height: 100vh; }
+    .sidebar { width: 200px; background: #F8FAFC; border-right: 1px solid #E2E8F0; padding: 20px; overflow-y: auto; }
+    .main { flex: 1; padding: 40px; overflow-y: auto; }
+    .nav-btn { width: 100%; padding: 12px 16px; margin: 8px 0; border: none; border-radius: 8px; background: #E2E8F0; color: #0F172A; cursor: pointer; text-align: left; font-weight: 600; }
+    .nav-btn.active { background: #2563EB; color: white; }
+    .slide { display: none; padding: 40px; }
+    .slide.active { display: block; }
+    button { padding: 10px 20px; background: #FF8A3C; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  </style>
+<script>window.NEXUS_META={"nexus_name":"Healthcare Clinic Coordination Hub","entity_label":"Clinic Coordination Record","fields":["CASE ID","ASSIGNED CLINICIAN","PATIENT RISK LEVEL","COORDINATION STATUS","DOCUMENTATION COMPLETENESS","COMPLIANCE SCORE","NEXT REVIEW DATE","OVERDUE ACTION ITEMS","CARE TEAM MEMBERS","ADMISSION DATE","COMPLIANCE GAP FLAGS","CLINICAL ASSESSMENT NOTES"],"field_explanations":[{"what":"Unique identifier for each coordination case record","why":"Enables precise tracking and reference across the system","example":"CC-2024-00471"},{"what":"Primary clinician responsible for this case","why":"Ensures clear accountability and workload visibility","example":"Dr. Sarah Patel, RN"},{"what":"Assessed risk tier assigned to the patient","why":"Prioritizes intervention and resource allocation","example":"High, Moderate, Low"},{"what":"Current workflow stage of the coordination case","why":"Reveals bottlenecks and overdue case movement","example":"Pending Review, Active, Closed"},{"what":"Percentage of required documents submitted and verified","why":"Identifies missing documentation before compliance audits","example":"78% complete, 3 docs missing"},{"what":"Numeric score reflecting adherence to clinical protocols","why":"Surfaces compliance gaps across the operation","example":"Score: 84 out of 100"},{"what":"Scheduled date for the next clinical case review","why":"Flags overdue reviews and upcoming deadlines","example":"March 15, 2025"},{"what":"Count of action items past their due date","why":"Highlights unresolved tasks requiring immediate attention","example":"4 overdue items flagged"},{"what":"All clinical staff assigned to support this case","why":"Ensures coordinated care and shared responsibility","example":"Nurse, Specialist, Case Manager"},{"what":"Date the patient was formally admitted to care","why":"Anchors timeline calculations and length-of-stay tracking","example":"January 8, 2025"},{"what":"Active flags indicating specific compliance deficiencies","why":"Enables rapid identification of regulatory risk areas","example":"Missing consent, late reporting"},{"what":"Governed observations, assessments, and recommended actions","why":"Captures structured clinical insight for audit and review","example":"Patient reassessed, escalation recommended"}],"pods":[{"pod_name":"Overdue & At-Risk Case Tracker","pod_type":"window","description":"A live-updating window displaying all cases with overdue action items, elevated patient risk levels, or approaching review dates. Sorted by urgency, it gives coordinators an immediate view of cases requiring intervention, filtered by assigned clinician or care team."},{"pod_name":"Compliance & Documentation Review Room","pod_type":"room","description":"A dedicated workspace where staff can drill into individual coordination records to review documentation completeness, compliance scores, and active compliance gap flags. Supports inline note entry for clinical assessment updates and action item resolution tracking."},{"pod_name":"Clinic Operations Compliance Dashboard","pod_type":"infographic","description":"A visual infographic dashboard presenting key operational metrics at a glance: average compliance scores by clinician, documentation completeness rates across all active cases, distribution of patient risk levels, and a trend line of overdue items over time. Color-coded indicators highlight critical thresholds and emerging patterns across the clinic operation."}],"governance_tier":"Standard","schema_description":"Each record represents a clinic coordination case capturing assigned clinical personnel, case status, compliance metrics, documentation completeness, timeline milestones, and governed notes for assessments and action items."};</script></head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px;">AIRS</div>
+      <button class="nav-btn active" onclick="showMode('home')">Home</button>
+      <button class="nav-btn" onclick="showMode('records')">Records</button>
+      <button class="nav-btn" onclick="showMode('slides')">Schema Slides</button>
+    </div>
+    <div class="main">
+      <div id="mode-home" style="display:block">
+        <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 20px;">AIRS Nexus</h1>
+        <div id="schema-fields" style="margin-top: 40px;">
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">12 Governed Fields</h2>
+          <div id="home-schema-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;"></div>
+        </div>
+        <div id="pods-section" style="margin-top: 40px;">
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">Generated Pods</h2>
+          <div id="home-pods-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;"></div>
+        </div>
+      </div>
+
+      <div id="mode-records" style="display:none">
+        <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 20px;">Records</h1>
+        <div id="records-list" style="margin-top: 20px;"></div>
+      </div>
+
+      <div id="mode-slides" style="display:none">
+        <div id="slides-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const M = window.NEXUS_META || {};
+    const FIELDS = M.fields || [];
+    const PODS = M.pods || [];
+
+    function showMode(mode) {
+      document.querySelectorAll('[id^="mode-"]').forEach(el => el.style.display = 'none');
+      document.getElementById('mode-' + mode).style.display = 'block';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (mode === 'home') loadHome();
+      if (mode === 'records') loadRecords();
+      if (mode === 'slides') loadSlides();
+    }
+
+    function loadHome() {
+      const sg = document.getElementById('home-schema-grid');
+      sg.innerHTML = FIELDS.map((f, i) => {
+        const label = typeof f === 'object' ? (f.label || f.name || 'Field') : f;
+        return '<div style="padding:16px;border:1px solid #E2E8F0;border-radius:8px;background:#FAFAFA"><span style="font-weight:700">' + label + '</span></div>';
+      }).join('');
+      
+      const pg = document.getElementById('home-pods-grid');
+      pg.innerHTML = PODS.map(p => {
+        const name = typeof p === 'string' ? p : (p.name || 'Pod');
+        return '<div style="padding:16px;border:1px solid #E2E8F0;border-radius:8px;background:#FAFAFA"><span style="font-weight:700">' + name + '</span></div>';
+      }).join('');
+    }
+
+    function loadRecords() {
+      fetch('/api/records')
+        .then(r => r.json())
+        .then(records => {
+          const list = document.getElementById('records-list');
+          list.innerHTML = records.map(r => '<div style="padding:16px;border:1px solid #E2E8F0;border-radius:8px;margin:8px 0">Record #' + r.id + ' — ' + r.status + '</div>').join('');
+        })
+        .catch(e => {
+          document.getElementById('records-list').innerHTML = '<div style="color:#c33">Error: ' + e.message + '</div>';
+        });
+    }
+
+    function loadSlides() {
+      const container = document.getElementById('slides-container');
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">Loading slides...</div>';
+      fetch('/api/slides')
+        .then(r => r.text())
+        .then(html => {
+          container.innerHTML = html;
+        })
+        .catch(e => {
+          container.innerHTML = '<div style="padding:40px;color:#c33">Error: ' + e.message + '</div>';
+        });
+    }
+
+    loadHome();
+  </script>
+</body>
+</html>
